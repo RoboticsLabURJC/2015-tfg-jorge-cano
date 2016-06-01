@@ -13,11 +13,16 @@ import serial, Queue, select
 import traceback
 import select
 import shlex
+import math
+import Ice,thread, numpy
 
 from MAVProxy.modules.lib import textconsole
 from MAVProxy.modules.lib import rline
 from MAVProxy.modules.lib import mp_module
 from MAVProxy.modules.lib import dumpstacks
+
+from Pose3D import Pose3DI
+from pymavlink import quaternion
 
 # adding all this allows pyinstaller to build a working windows executable
 # note that using --hidden-import does not work for these modules
@@ -818,17 +823,41 @@ def main_loop():
                     # on an exception, remove it from the select list
                     mpstate.select_extra.pop(fd)
 
-        ###### Jorge Cano CODE ######
+        ########################## Jorge Cano CODE ##########################
 
-        Rollvalue = mpstate.status.msgs['ATTITUDE'].roll;
-        Pitchvalue = mpstate.status.msgs['ATTITUDE'].pitch;
+        Rollvalue = mpstate.status.msgs['ATTITUDE'].roll    #rad
+        Pitchvalue = mpstate.status.msgs['ATTITUDE'].pitch  #rad
+        Yawvalue = mpstate.status.msgs['ATTITUDE'].yaw      #rad
 
-        print "PixHawk sensors";
-        print "Pitch: ", Pitchvalue
-        print "Roll: ",Rollvalue
+        # ESTIMATED: fused GPS and accelerometers
+        Latvalue = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lat)/1E7)    #rad
+        Lonvalue = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lon)/1E7)    #rad
+        Altvalue = (mpstate.status.msgs['GLOBAL_POSITION_INT'].alt)/1000   #meters
 
+        PH_quat = quaternion.Quaternion([Rollvalue, Pitchvalue, Yawvalue])
+        PH_xyz = spherical2cartesian(Latvalue, Lonvalue, Altvalue)
 
-        ####################
+        #print PH_quat
+        #print PH_xyz
+
+        PHx = PH_xyz[0]
+        PHy = PH_xyz[1]
+        PHz = PH_xyz[2]
+        PHh = 1 #Altvalue
+        PHq0 = PH_quat.__getitem__(0)
+        PHq1 = PH_quat.__getitem__(1)
+        PHq2 = PH_quat.__getitem__(2)
+        PHq3 = PH_quat.__getitem__(3)
+
+        PH_Pose3D.setPose3DData(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
+
+        #print PH_Pose3D.x
+
+        #pixhawkpos = Pose3DI(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
+        #pixhawkpos.setPose3DData(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
+        #PH_Pose3D.printPose3DData(PH_Pose3D)
+
+        #####################################################################
 
 
 
@@ -862,9 +891,71 @@ def run_script(scriptfile):
         process_stdin(line)
     f.close()
 
+########################## Jorge Cano CODE ##########################
+
+def TxPose3D(Pose3D):
+
+    status = 0
+    ic = None
+    try:
+        ic = Ice.initialize(sys.argv)
+        adapter = ic.createObjectAdapterWithEndpoints("PHPose3DAdapter", "default -p 9998")
+        object = Pose3D
+        print object.getPose3DData()
+        adapter.add(object, ic.stringToIdentity("PHPose3D"))
+        adapter.activate()
+        ic.waitForShutdown()
+    except:
+        traceback.print_exc()
+        status = 1
+
+    if ic:
+        # Clean up
+        try:
+            ic.destroy()
+        except:
+            traceback.print_exc()
+            status = 1
+
+    sys.exit(status)
+
+def spherical2cartesian(lat, lon, alt):
+
+    wgs84_radius = 6378137 #meters
+    wgs84_flattening = 1 - 1 / 298.257223563
+
+    radius = wgs84_radius + alt;
+    x = radius * math.cos(lat) * math.cos(lon)
+    y = radius * math.cos(lat) * math.sin(lon)
+    z = radius * math.sin(lat) * wgs84_flattening
+
+    xyz = [x,y,z]
+
+    return xyz
+
+def local2NED(bocyvel, att):
+
+    roll = att.roll
+    pitch = att.pitch
+    yaw = att.roll
+
+    bvx = bocyvel.x
+    bvy = bocyvel.y
+    bvz = bocyvel.z
+
+    NEDvel = {}
+
+    NEDvel.x = bvx * math.cos(pitch)*math.cos(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.cos(yaw) - math.cos(roll)*math.sin(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.cos(yaw) + math.sin(roll)*math.sin(yaw))
+    NEDvel.y = bvx * math.cos(pitch)*math.sin(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.sin(yaw) + math.cos(roll)*math.cos(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.sin(yaw) - math.sin(roll)*math.cos(yaw))
+    NEDvel.z = -bvx * math.sin(pitch)                + bvy * (math.sin(roll)*math.cos(pitch))                                                + bvz * (math.cos(roll)*math.cos(pitch))
+
+    return NEDvel
+
+#####################################################################
+
 if __name__ == '__main__':
     from optparse import OptionParser
-    parser = OptionParser("mavproxy.py [options]")
+    parser = OptionParser("pixhawkserver.py [options]")
 
     parser.add_option("--master", dest="master", action='append',
                       metavar="DEVICE[,BAUD]", help="MAVLink master port and optional baud rate",
@@ -1084,10 +1175,32 @@ if __name__ == '__main__':
     # log all packets from the master, for later replay
     open_telemetry_logs(logpath_telem, logpath_telem_raw)
 
+    ########################## Jorge Cano CODE ##########################
+
+    PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0)
+
+    #####################################################################
+
     # run main loop as a thread
     mpstate.status.thread = threading.Thread(target=main_loop, name='main_loop')
     mpstate.status.thread.daemon = True
     mpstate.status.thread.start()
+
+    ########################## Jorge Cano CODE ##########################
+
+    #Open an ICE communication and leave it open in a parallel threat
+
+
+    #thread.start_new_thread(TxPose3D(PH_Pose3D))
+
+    PoseTheading = threading.Thread(target=TxPose3D, args=(PH_Pose3D,), name='Pose_Theading')
+    PoseTheading.daemon = True
+    PoseTheading.start()
+
+    # while True:
+    #     process_stdin('velocity 1 1 1')  #SET_POSITION_TARGET_LOCAL_NED
+
+    #####################################################################
 
     # use main program for input. This ensures the terminal cleans
     # up on exit
