@@ -894,7 +894,7 @@ def run_script(scriptfile):
 
 ########################## Jorge Cano CODE ##########################
 
-def TxPose3D(Pose3D):
+def openPose3DChannel(Pose3D):
 
     status = 0
     ic = None
@@ -921,7 +921,7 @@ def TxPose3D(Pose3D):
 
     sys.exit(status)
 
-def RxCMDVel(CMDVel):
+def openCMDVelChannel(CMDVel):
     status = 0
     ic = None
     CMDVel2Rx = CMDVel #CMDVel.getCMDVelData()
@@ -947,6 +947,87 @@ def RxCMDVel(CMDVel):
 
     sys.exit(status)
 
+class NavdataI(jderobot.Navdata):
+    def __init__(self):
+        pass
+        # data = jderobot.NavdataData()
+        # last_navdata_id = -1
+        # max_num_samples = 50;
+
+def openNavdataChannel():
+
+    status = 0
+    ic = None
+    Navdata2Tx = NavdataI()
+
+    try:
+        ic = Ice.initialize(sys.argv)
+        adapter = ic.createObjectAdapterWithEndpoints("NavdataAdapter", "default -p 9001")
+        object = Navdata2Tx
+        adapter.add(object, ic.stringToIdentity("Navdata"))
+        adapter.activate()
+        ic.waitForShutdown()
+    except:
+        traceback.print_exc()
+        status = 1
+
+    if ic:
+        # Clean up
+        try:
+            ic.destroy()
+        except:
+            traceback.print_exc()
+            status = 1
+
+    sys.exit(status)
+
+class ExtraI(jderobot.ArDroneExtra):
+    pass
+
+def openExtraChannel():
+
+    status = 0
+    ic = None
+    Extra2Tx = ExtraI()
+    try:
+        ic = Ice.initialize(sys.argv)
+        adapter = ic.createObjectAdapterWithEndpoints("ExtraAdapter", "default -p 9002")
+        object = Extra2Tx
+        adapter.add(object, ic.stringToIdentity("Extra"))
+        adapter.activate()
+        ic.waitForShutdown()
+    except:
+        traceback.print_exc()
+        status = 1
+
+    if ic:
+        # Clean up
+        try:
+            ic.destroy()
+        except:
+            traceback.print_exc()
+            status = 1
+
+    sys.exit(status)
+
+def sendCMDVel2Vehicle(CMDVel):
+
+    while True:
+
+        time.sleep(1) #1Hz
+
+        CMDVel2send = CMDVel.getCMDVelData()
+
+        linearXstring = str(CMDVel2send.linearX*10)
+        linearYstring = str(CMDVel2send.linearY*10)
+        linearZstring = str(CMDVel2send.linearZ*10)
+
+        velocitystring = 'velocity '+ linearXstring + ' ' + linearYstring + ' ' + linearZstring
+
+        # print velocitystring
+
+        print 'CMDVel'
+        process_stdin(velocitystring)  # SET_POSITION_TARGET_LOCAL_NED
 
 def spherical2cartesian(lat, lon, alt):
 
@@ -1206,8 +1287,8 @@ if __name__ == '__main__':
 
     ########################## Jorge Cano CODE ##########################
 
-    PH_Pose3D = Pose3DI()
-    PH_CMDVel = CMDVelI()
+    PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0)
+    PH_CMDVel = CMDVelI(0,0,0,0,0,0)
 
     #####################################################################
 
@@ -1220,16 +1301,37 @@ if __name__ == '__main__':
 
     #Open an ICE TX communication and leave it open in a parallel threat
 
-    PoseTheading = threading.Thread(target=TxPose3D, args=(PH_Pose3D,), name='Pose_Theading')
+    PoseTheading = threading.Thread(target=openPose3DChannel, args=(PH_Pose3D,), name='Pose_Theading')
     PoseTheading.daemon = True
     PoseTheading.start()
 
     # Open an ICE RX communication and leave it open in a parallel threat
 
-    CMDVelTheading = threading.Thread(target=RxCMDVel, args=(PH_CMDVel,), name='CMDVel_Theading')
+    CMDVelTheading = threading.Thread(target=openCMDVelChannel, args=(PH_CMDVel,), name='CMDVel_Theading')
     CMDVelTheading.daemon = True
     CMDVelTheading.start()
 
+    # Open an ICE channel empty
+
+    CMDVelTheading = threading.Thread(target=openNavdataChannel, args=(), name='Navdata_Theading')
+    CMDVelTheading.daemon = True
+    CMDVelTheading.start()
+
+    # Open an ICE channel empty
+
+    CMDVelTheading = threading.Thread(target=openExtraChannel, args=(), name='Extra_Theading')
+    CMDVelTheading.daemon = True
+    CMDVelTheading.start()
+
+    # Open an MAVLink TX communication and leave it open in a parallel threat
+
+    PoseTheading = threading.Thread(target=sendCMDVel2Vehicle, args=(PH_CMDVel,), name='TxCMDVel_Theading')
+    PoseTheading.daemon = True
+    PoseTheading.start()
+
+
+    # while True:
+    #     print PH_Pose3D.getPose3DData()
 
     # while True:
     #     process_stdin('velocity 1 1 1')  #SET_POSITION_TARGET_LOCAL_NED
