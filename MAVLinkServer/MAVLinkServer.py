@@ -56,6 +56,7 @@ class MPStatus(object):
         self.exit = False
         self.flightmode = 'MAV'
         self.last_mode_announce = 0
+        self.last_mode_announced = 'MAV'
         self.logdir = None
         self.last_heartbeat = 0
         self.last_message = 0
@@ -128,8 +129,8 @@ class MPState(object):
         from MAVProxy.modules.lib.mp_settings import MPSettings, MPSetting
         self.settings = MPSettings(
             [ MPSetting('link', int, 1, 'Primary Link', tab='Link', range=(0,4), increment=1),
-              MPSetting('streamrate', int, 4, 'Stream rate link1', range=(-1,20), increment=1),
-              MPSetting('streamrate2', int, 4, 'Stream rate link2', range=(-1,20), increment=1),
+              MPSetting('streamrate', int, 4, 'Stream rate link1', range=(-1,100), increment=1),
+              MPSetting('streamrate2', int, 4, 'Stream rate link2', range=(-1,100), increment=1),
               MPSetting('heartbeat', int, 1, 'Heartbeat rate', range=(0,5), increment=1),
               MPSetting('mavfwd', bool, True, 'Allow forwarded control'),
               MPSetting('mavfwd_rate', bool, False, 'Allow forwarded rate control'),
@@ -421,6 +422,14 @@ command_map = {
     'alias'   : (cmd_alias,    'command aliases')
     }
 
+def shlex_quotes(value):
+    '''see http://stackoverflow.com/questions/6868382/python-shlex-split-ignore-single-quotes'''
+    lex = shlex.shlex(value)
+    lex.quotes = '"'
+    lex.whitespace_split = True
+    lex.commenters = ''
+    return list(lex)
+
 def process_stdin(line):
     '''handle commands from user'''
     if line is None:
@@ -450,7 +459,7 @@ def process_stdin(line):
     if not line:
         return
 
-    args = shlex.split(line)
+    args = shlex_quotes(line)
     cmd = args[0]
     while cmd in mpstate.aliases:
         line = mpstate.aliases[cmd]
@@ -824,7 +833,8 @@ def main_loop():
                     # on an exception, remove it from the select list
                     mpstate.select_extra.pop(fd)
 
-        ########################## Jorge Cano CODE ##########################
+
+	########################## Jorge Cano CODE ##########################
 
         Rollvalue = mpstate.status.msgs['ATTITUDE'].roll    #rad
         Pitchvalue = mpstate.status.msgs['ATTITUDE'].pitch  #rad
@@ -859,7 +869,6 @@ def main_loop():
         #PH_Pose3D.printPose3DData(PH_Pose3D)
 
         #####################################################################
-
 
 
 def input_loop():
@@ -950,9 +959,10 @@ def openCMDVelChannel(CMDVel):
 class NavdataI(jderobot.Navdata):
     def __init__(self):
         pass
-        # data = jderobot.NavdataData()
-        # last_navdata_id = -1
-        # max_num_samples = 50;
+
+    def getNavdata(self, current=None):
+        data = jderobot.NavdataData()
+        return data
 
 def openNavdataChannel():
 
@@ -1018,9 +1028,9 @@ def sendCMDVel2Vehicle(CMDVel):
 
         CMDVel2send = CMDVel.getCMDVelData()
 
-        linearXstring = str(CMDVel2send.linearX*10)
-        linearYstring = str(CMDVel2send.linearY*10)
-        linearZstring = str(CMDVel2send.linearZ*10)
+        linearXstring = str(0.0)#CMDVel2send.linearX*10)
+        linearYstring = str(0.0)#CMDVel2send.linearY*10)
+        linearZstring = str(-0.2)#CMDVel2send.linearZ*10)
 
         velocitystring = 'velocity '+ linearXstring + ' ' + linearYstring + ' ' + linearZstring
 
@@ -1063,9 +1073,10 @@ def local2NED(bocyvel, att):
 
 #####################################################################
 
+
 if __name__ == '__main__':
     from optparse import OptionParser
-    parser = OptionParser("pixhawkserver.py [options]")
+    parser = OptionParser("mavproxy.py [options]")
 
     parser.add_option("--master", dest="master", action='append',
                       metavar="DEVICE[,BAUD]", help="MAVLink master port and optional baud rate",
@@ -1284,6 +1295,8 @@ if __name__ == '__main__':
 
     # log all packets from the master, for later replay
     open_telemetry_logs(logpath_telem, logpath_telem_raw)
+
+
 
     ########################## Jorge Cano CODE ##########################
 
