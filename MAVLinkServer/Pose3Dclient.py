@@ -7,7 +7,7 @@ status = 0
 ic = None
 try:
     ic = Ice.initialize(sys.argv)
-    base = ic.stringToProxy("PHPose3D:default -p 9998")
+    base = ic.stringToProxy("Pose3D:default -p 9998")
     datos = jderobot.Pose3DPrx.checkedCast(base)
     print datos
     if not datos:

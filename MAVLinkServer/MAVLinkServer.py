@@ -938,7 +938,7 @@ def openCMDVelChannel(CMDVel):
         ic = Ice.initialize(sys.argv)
         adapter = ic.createObjectAdapterWithEndpoints("CMDVelAdapter", "default -p 9999")
         object = CMDVel2Rx
-        print CMDVel2Rx
+        #print CMDVel2Rx
         adapter.add(object, ic.stringToIdentity("CMDVel"))
         adapter.activate()
         ic.waitForShutdown()
@@ -1028,9 +1028,9 @@ def sendCMDVel2Vehicle(CMDVel):
 
         CMDVel2send = CMDVel.getCMDVelData()
 
-        linearXstring = str(0.0)#CMDVel2send.linearX*10)
-        linearYstring = str(0.0)#CMDVel2send.linearY*10)
-        linearZstring = str(-0.2)#CMDVel2send.linearZ*10)
+        linearXstring = str(CMDVel2send.linearX)
+        linearYstring = str(CMDVel2send.linearY)
+        linearZstring = str(CMDVel2send.linearZ)
 
         velocitystring = 'velocity '+ linearXstring + ' ' + linearYstring + ' ' + linearZstring
 
