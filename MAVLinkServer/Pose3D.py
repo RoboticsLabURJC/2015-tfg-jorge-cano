@@ -36,11 +36,9 @@ class Pose3DI(jderobot.Pose3D):
 
         return 0
 
-
-
     def getPose3DData(self, current=None):
 
-        time.sleep(0.05) #50 ms rate to tx Pose3D
+        time.sleep(0.05) # 20Hz (50ms) rate to tx Pose3D
 
         lock.acquire()
         #print 'adquired G'

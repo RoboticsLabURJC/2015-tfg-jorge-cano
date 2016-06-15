@@ -39,7 +39,7 @@ class CMDVelI(jderobot.CMDVel):
 
     def getCMDVelData(self, current=None):
 
-        time.sleep(0.05)  # 50 ms rate to rx CMDVel
+        time.sleep(0.05)  # 20Hz (50ms) rate to rx CMDVel
 
         lock.acquire()
 

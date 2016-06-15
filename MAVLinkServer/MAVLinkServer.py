@@ -1020,23 +1020,23 @@ def openExtraChannel():
 
     sys.exit(status)
 
-def sendCMDVel2Vehicle(CMDVel):
+def sendCMDVel2Vehicle(CMDVel,Pose3D):
 
     while True:
 
-        time.sleep(1) #1Hz
-
         CMDVel2send = CMDVel.getCMDVelData()
+        Pose3D2send = Pose3D.getPose3DData()
+        NEDvel = body2NED(CMDVel2send, Pose3D2send) # [x,y,z]
 
-        linearXstring = str(CMDVel2send.linearX)
-        linearYstring = str(CMDVel2send.linearY)
-        linearZstring = str(CMDVel2send.linearZ)
+        linearXstring = str(NEDvel[0])
+        linearYstring = str(NEDvel[1])
+        linearZstring = str(NEDvel[2])
 
         velocitystring = 'velocity '+ linearXstring + ' ' + linearYstring + ' ' + linearZstring
 
         # print velocitystring
 
-        print 'CMDVel'
+        print 'CMDVel :'
         process_stdin(velocitystring)  # SET_POSITION_TARGET_LOCAL_NED
 
 def spherical2cartesian(lat, lon, alt):
@@ -1053,23 +1053,121 @@ def spherical2cartesian(lat, lon, alt):
 
     return xyz
 
-def local2NED(bocyvel, att):
+def body2NED(CMDVel, Pose3D):
 
-    roll = att.roll
-    pitch = att.pitch
-    yaw = att.roll
 
-    bvx = bocyvel.x
-    bvy = bocyvel.y
-    bvz = bocyvel.z
+    q1 = [0, CMDVel.linearX, CMDVel.linearY, CMDVel.linearZ]
+    q2 = [Pose3D.q0, Pose3D.q1, Pose3D.q2, Pose3D.q3]
 
-    NEDvel = {}
+    q1 = qNormal(q1)
+    q2 = qNormal(q2)
 
-    NEDvel.x = bvx * math.cos(pitch)*math.cos(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.cos(yaw) - math.cos(roll)*math.sin(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.cos(yaw) + math.sin(roll)*math.sin(yaw))
-    NEDvel.y = bvx * math.cos(pitch)*math.sin(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.sin(yaw) + math.cos(roll)*math.cos(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.sin(yaw) - math.sin(roll)*math.cos(yaw))
-    NEDvel.z = -bvx * math.sin(pitch)                + bvy * (math.sin(roll)*math.cos(pitch))                                                + bvz * (math.cos(roll)*math.cos(pitch))
+    #rotation = q2*q1*q2'
 
-    return NEDvel
+    q2inverse = qInverse(q2)
+    qtempotal = qMultiply(q1,q2inverse)
+    q = qMultiply(q2,qtempotal)
+
+    rotatedVector = q[1:len(q)] #obtain [q1,q2,q3]
+
+    return rotatedVector
+
+    # q0 = Pose3D.q0
+    # q1 = Pose3D.q1
+    # q2 = Pose3D.q2
+    # q3 = Pose3D.q3
+    #
+    # # obtain eulers from quaternion TO BE IMPROVED!!!!!!!!!!!
+    #
+    # roll = 1/ math.tan((2*(q1*q2+q0*q3))/(q3*q3+q2*q2-q1*q1-q0*q0))
+    # pitch = 1/math.sin(-2*(q0*q2-q1*q3))
+    # yaw = 1/ math.tan((2*(q0*q1+q3*q2))/(q3*q3-q2*q2-q1*q1+q0*q0))
+    #
+    # # Body velocity (x,y,z)
+    #
+    # bvx = CMDVel.linearX
+    # bvy = CMDVel.linearY
+    # bvz = CMDVel.linearZ
+    #
+    # NEDvel = [0,0,0] #[x,y,z]
+    #
+    # NEDvel[0] = bvx * math.cos(pitch)*math.cos(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.cos(yaw) - math.cos(roll)*math.sin(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.cos(yaw) + math.sin(roll)*math.sin(yaw))
+    # NEDvel[1] = bvx * math.cos(pitch)*math.sin(yaw)   + bvy * (math.sin(roll)*math.sin(pitch)*math.sin(yaw) + math.cos(roll)*math.cos(yaw))   + bvz * (math.cos(roll)*math.sin(pitch)*math.sin(yaw) - math.sin(roll)*math.cos(yaw))
+    # NEDvel[2] = -bvx * math.sin(pitch)                + bvy * (math.sin(roll)*math.cos(pitch))                                                + bvz * (math.cos(roll)*math.cos(pitch))
+    #
+    # return NEDvel
+
+def qMultiply (q1,q2):
+
+    q1 = qNormal(q1)
+    q2 = qNormal(q2)
+
+    # quaternion1
+    w1 = q1[0]
+    x1 = q1[1]
+    y1 = q1[2]
+    z1 = q1[3]
+
+    #quaternion2
+    w2 = q2[0]
+    x2 = q2[1]
+    y2 = q2[2]
+    z2 = q2[3]
+
+    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+    y = w1*y2 + y1*w2 + z1*x2 - x1*z2
+    z = w1*z2 + z1*w2 + x1*y2 - y1*x2
+
+    q = [w,x,y,z]
+
+    q = qNormal(q)
+    return q
+
+def qNormal(q1):
+
+    qmodule = math.sqrt(q1[0]*q1[0] + q1[1]*q1[1] + q1[2]*q1[2] + q1[3]*q1[3])
+    q = [0,0,0,0]
+
+    if (qmodule == 0):
+        qmodule = 0.000000000001
+
+    q[0] = q1[0] / qmodule
+    q[1] = q1[1] / qmodule
+    q[2] = q1[2] / qmodule
+    q[3] = q1[3] / qmodule
+
+    return q
+
+def qConjugate(q1):
+
+    q1 = qNormal(q1)
+    q = [0,0,0,0]
+    q[0] = q1[0]
+    q[1] = -q1[1]
+    q[2] = -q1[2]
+    q[3] = -q1[3]
+
+    q = qNormal(q)
+    return q
+
+def qInverse(q1):
+
+    q1 = qNormal(q1)
+    qconjugate = qConjugate(q1)
+    qmodule = math.sqrt(q1[0] * q1[0] + q1[1] * q1[1] + q1[2] * q1[2] + q1[3] * q1[3])
+
+    if (qmodule == 0):
+        qmodule = 0.000000000001
+
+    q = [0,0,0,0]
+    q[0] = qconjugate[0] / qmodule
+    q[1] = qconjugate[1] / qmodule
+    q[2] = qconjugate[2] / qmodule
+    q[3] = qconjugate[3] / qmodule
+
+    q = qNormal(q)
+    return q
 
 #####################################################################
 
@@ -1300,8 +1398,8 @@ if __name__ == '__main__':
 
     ########################## Jorge Cano CODE ##########################
 
-    PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0)
-    PH_CMDVel = CMDVelI(0,0,0,0,0,0)
+    PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0) #1 to avoid indeterminations
+    PH_CMDVel = CMDVelI(0,0,0,0,0,0) #1 to avoid indeterminations
 
     #####################################################################
 
@@ -1338,7 +1436,7 @@ if __name__ == '__main__':
 
     # Open an MAVLink TX communication and leave it open in a parallel threat
 
-    PoseTheading = threading.Thread(target=sendCMDVel2Vehicle, args=(PH_CMDVel,), name='TxCMDVel_Theading')
+    PoseTheading = threading.Thread(target=sendCMDVel2Vehicle, args=(PH_CMDVel,PH_Pose3D,), name='TxCMDVel_Theading')
     PoseTheading.daemon = True
     PoseTheading.start()
 
