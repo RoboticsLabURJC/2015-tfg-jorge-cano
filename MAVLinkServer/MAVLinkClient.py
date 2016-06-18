@@ -176,14 +176,14 @@ if __name__ == '__main__':
     CMDVelTheading.daemon = True
     CMDVelTheading.start()
 
-    spiralTrajectory(StartWaypoint, ScanDistance, SpinsNumber)
 
     DefTrajectory = spiralTrajectory(StartWaypoint, ScanDistance, SpinsNumber)
     trajectory = DefTrajectory
     print trajectory
 
     while targetLost:
-        time.sleep(1)
+
+        time.sleep(0.05) #20Hz
 
         position = PH_Pose3D.getPose3DData()
         print position
