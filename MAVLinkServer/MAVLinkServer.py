@@ -23,6 +23,7 @@ from MAVProxy.modules.lib import dumpstacks
 
 from Pose3D import Pose3DI
 from CMDVel import CMDVelI
+from Extra import ExtraI
 from pymavlink import quaternion
 
 # adding all this allows pyinstaller to build a working windows executable
@@ -215,7 +216,6 @@ class MPState(object):
             if not m.linkerror:
                 return m
         return self.mav_master[self.settings.link-1]
-
 
 def get_mav_param(param, default=None):
     '''return a EEPROM parameter value'''
@@ -930,16 +930,69 @@ def openPose3DChannel(Pose3D):
 
     sys.exit(status)
 
+def openPose3DChannelWP(Pose3D):
+
+    status = 0
+    ic = None
+    Pose2Rx = Pose3D #Pose3D.getPose3DData()
+    try:
+        ic = Ice.initialize(sys.argv)
+        adapter = ic.createObjectAdapterWithEndpoints("Pose3DAdapter", "default -p 9994")
+        object = Pose2Rx
+        #print object.getPose3DData()
+        adapter.add(object, ic.stringToIdentity("Pose3D"))
+        adapter.activate()
+        ic.waitForShutdown()
+    except:
+        traceback.print_exc()
+        status = 1
+
+    if ic:
+        # Clean up
+        try:
+            ic.destroy()
+        except:
+            traceback.print_exc()
+            status = 1
+
+    sys.exit(status)
+
 def openCMDVelChannel(CMDVel):
     status = 0
     ic = None
     CMDVel2Rx = CMDVel #CMDVel.getCMDVelData()
     try:
         ic = Ice.initialize(sys.argv)
-        adapter = ic.createObjectAdapterWithEndpoints("CMDVelAdapter", "default -p 9999")
+        adapter = ic.createObjectAdapterWithEndpoints("CMDVelAdapter", "default -p 9997")
         object = CMDVel2Rx
         #print CMDVel2Rx
         adapter.add(object, ic.stringToIdentity("CMDVel"))
+        adapter.activate()
+        ic.waitForShutdown()
+    except:
+        traceback.print_exc()
+        status = 1
+
+    if ic:
+        # Clean up
+        try:
+            ic.destroy()
+        except:
+            traceback.print_exc()
+            status = 1
+
+    sys.exit(status)
+
+def openExtraChannel(Extra):
+
+    status = 0
+    ic = None
+    Extra2Tx = Extra
+    try:
+        ic = Ice.initialize(sys.argv)
+        adapter = ic.createObjectAdapterWithEndpoints("ExtraAdapter", "default -p 9995")
+        object = Extra2Tx
+        adapter.add(object, ic.stringToIdentity("Extra"))
         adapter.activate()
         ic.waitForShutdown()
     except:
@@ -972,38 +1025,9 @@ def openNavdataChannel():
 
     try:
         ic = Ice.initialize(sys.argv)
-        adapter = ic.createObjectAdapterWithEndpoints("NavdataAdapter", "default -p 9001")
+        adapter = ic.createObjectAdapterWithEndpoints("NavdataAdapter", "default -p 9996")
         object = Navdata2Tx
         adapter.add(object, ic.stringToIdentity("Navdata"))
-        adapter.activate()
-        ic.waitForShutdown()
-    except:
-        traceback.print_exc()
-        status = 1
-
-    if ic:
-        # Clean up
-        try:
-            ic.destroy()
-        except:
-            traceback.print_exc()
-            status = 1
-
-    sys.exit(status)
-
-class ExtraI(jderobot.ArDroneExtra):
-    pass
-
-def openExtraChannel():
-
-    status = 0
-    ic = None
-    Extra2Tx = ExtraI()
-    try:
-        ic = Ice.initialize(sys.argv)
-        adapter = ic.createObjectAdapterWithEndpoints("ExtraAdapter", "default -p 9002")
-        object = Extra2Tx
-        adapter.add(object, ic.stringToIdentity("Extra"))
         adapter.activate()
         ic.waitForShutdown()
     except:
@@ -1038,6 +1062,30 @@ def sendCMDVel2Vehicle(CMDVel,Pose3D):
 
         print 'CMDVel :'
         process_stdin(velocitystring)  # SET_POSITION_TARGET_LOCAL_NED
+
+def sendWayPoint2Vehicle(Pose3D):
+
+    while True:
+        time.sleep(1)
+        wayPoint = Pose3D.getPose3DData()
+
+        latittude = str(wayPoint.x)
+        longitude = str(wayPoint.y)
+        altittude = str(int(wayPoint.z))
+
+        WPstring = 'guided ' + latittude + ' ' + longitude + ' ' + altittude
+        ###############process_stdin(WPstring)
+
+        #print wayPoint
+
+def landDecision(CMDVel):
+
+    while True:
+        time.sleep(1)
+        command = CMDVel.getCMDVelData()
+        if (command.linearZ == -1):
+            print'Lading decision: True'
+            process_stdin('mode land')
 
 def spherical2cartesian(lat, lon, alt):
 
@@ -1400,6 +1448,8 @@ if __name__ == '__main__':
 
     PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0) #1 to avoid indeterminations
     PH_CMDVel = CMDVelI(0,0,0,0,0,0) #1 to avoid indeterminations
+    PH_Extra = ExtraI()
+    WP_Pose3D = Pose3DI(0,0,0,0,0,0,0,0)
 
     #####################################################################
 
@@ -1422,30 +1472,50 @@ if __name__ == '__main__':
     CMDVelTheading.daemon = True
     CMDVelTheading.start()
 
+    # Open an ICE TX communication and leave it open in a parallel threat
+
+    CMDVelTheading = threading.Thread(target=openExtraChannel, args=(PH_Extra,), name='Extra_Theading')
+    CMDVelTheading.daemon = True
+    CMDVelTheading.start()
+
     # Open an ICE channel empty
 
     CMDVelTheading = threading.Thread(target=openNavdataChannel, args=(), name='Navdata_Theading')
     CMDVelTheading.daemon = True
     CMDVelTheading.start()
 
-    # Open an ICE channel empty
+    # # Open an MAVLink TX communication and leave it open in a parallel threat
+    #
+    # PoseTheading = threading.Thread(target=sendCMDVel2Vehicle, args=(PH_CMDVel,PH_Pose3D,), name='TxCMDVel_Theading')
+    # PoseTheading.daemon = True
+    # PoseTheading.start()
 
-    CMDVelTheading = threading.Thread(target=openExtraChannel, args=(), name='Extra_Theading')
-    CMDVelTheading.daemon = True
-    CMDVelTheading.start()
+
+    # Open an ICE TX communication and leave it open in a parallel threat
+
+    PoseTheading = threading.Thread(target=openPose3DChannelWP, args=(WP_Pose3D,), name='WayPoint_Theading')
+    PoseTheading.daemon = True
+    PoseTheading.start()
 
     # Open an MAVLink TX communication and leave it open in a parallel threat
 
-    PoseTheading = threading.Thread(target=sendCMDVel2Vehicle, args=(PH_CMDVel,PH_Pose3D,), name='TxCMDVel_Theading')
+    PoseTheading = threading.Thread(target=sendWayPoint2Vehicle, args=(WP_Pose3D,), name='WayPoint2Vehicle_Theading')
+    PoseTheading.daemon = True
+    PoseTheading.start()
+
+    # Open an MAVLink TX communication and leave it open in a parallel threat
+
+    PoseTheading = threading.Thread(target=landDecision, args=(PH_CMDVel,), name='LandDecision2Vehicle_Theading')
     PoseTheading.daemon = True
     PoseTheading.start()
 
 
-    # while True:
-    #     print PH_Pose3D.getPose3DData()
 
     # while True:
-    #     process_stdin('velocity 1 1 1')  #SET_POSITION_TARGET_LOCAL_NED
+    #     time.sleep(1)
+    #     CMDVel = PH_CMDVel.getCMDVelData()
+    #     print CMDVel
+
 
     #####################################################################
 
