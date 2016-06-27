@@ -21,16 +21,19 @@ lock = threading.Lock()
 
 # --- Trajectory ---#
 
-MissionHeight = 10      #metres
-StartWaypoint = [0,0,MissionHeight]
-ScanDistance = 5        #metres
-SpinsNumber = 3
-ReachedDist = 0.5       #metres
+MissionHeight = 5      #metres
+StartWayPointLatLonHei = {}
+StartWayPointLatLonHei['lat'] = math.radians(40.191240)
+StartWayPointLatLonHei['lon'] = math.radians(-3.855655)
+StartWayPointLatLonHei['hei'] = MissionHeight
+ScanDistance = 3        #metres
+SpinsNumber = 2
+ReachedDist = 1         #metres
+LandingPrecision = 5    #metres
 
 # --- Camera ---#
 
-# CameraHeight = int
-# CameraWidth = int
+CameraFOW = 120  # Field of View in degrees
 
 # --- Target ---#
 
@@ -319,31 +322,38 @@ def distance(pos1,pos2):
     for i in range(len(pos1)):
         dist.append(pos1[i] - pos2[i])
 
-    module = math.sqrt(dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2])
+    module = 0
+    for i in range(len(pos1)):
+        module = module + dist[i]*dist[i]
+
+    module = math.sqrt(module)
     module = math.fabs(module)
 
     return module
 
-def spiralTrajectory(startWaypoint, scanDistance, spinsNumber):
+def spiralTrajectory(startWP, scanDistance, spinsNumber):
 
     trajectory = []
-    trajectory.append(startWaypoint)
 
-    x = StartWaypoint[0]
-    y = StartWaypoint[1]
-    z = MissionHeight
+    x = startWP['x']
+    y = startWP['y']
+    z = startWP['z']
 
+    firstWP = [x, y, z]
+    trajectory.append(firstWP)
+
+    scanDistanceLatLon = scanDistance
 
     for i in range(spinsNumber):
 
-        x = x + scanDistance*(2*i+1)
+        x = x + scanDistanceLatLon*(2*i+1)
         trajectory.append([x,y,z])
-        y = y + scanDistance*(2*i+1)
+        y = y + scanDistanceLatLon*(2*i+1)
         trajectory.append([x,y,z])
 
-        x = x - scanDistance*(2*i+2)
+        x = x - scanDistanceLatLon*(2*i+2)
         trajectory.append([x,y,z])
-        y = y - scanDistance*(2*i+2)
+        y = y - scanDistanceLatLon*(2*i+2)
         trajectory.append([x,y,z])
 
     return trajectory
@@ -413,6 +423,153 @@ def detection(image, hmin, hmax, smin, smax, vmin, vmax):
 
     return center, area, stillLost
 
+def global2cartesian(poseLatLonHei):
+
+    wgs84_radius = 6378137 #meters
+    wgs84_flattening = 1 - 1 / 298.257223563
+    eartPerim = wgs84_radius * 2 * math.pi
+
+    earthRadiusLon = wgs84_radius * math.cos(poseLatLonHei['lat'])/wgs84_flattening
+    eartPerimLon = earthRadiusLon * 2 * math.pi
+
+    poseXYZ = {}
+    poseXYZ['x'] = poseLatLonHei['lon'] * eartPerimLon / (2*math.pi)
+    poseXYZ['y'] = poseLatLonHei['lat'] * eartPerim / (2*math.pi)
+    poseXYZ['z'] = poseLatLonHei['hei']
+    return poseXYZ
+
+def pixel2metres(pixelXY, pixelNum, height, fov):
+
+    #height = MissionHeight #only for testing
+    vehicleAngle = fov/2
+    groundAngle = (math.pi/2) - vehicleAngle
+    hipoten = height / math.sin(groundAngle)
+    groundSide = math.sqrt((hipoten*hipoten) - (height*height))
+
+    metersXpixel = 2*groundSide / pixelNum
+
+
+    metresXY = [metersXpixel*pixelXY[0] , metersXpixel*pixelXY[1]]
+
+    return metresXY
+
+def frameChange2D(vector, angle):
+
+    rotatedX = vector[0]*math.cos(angle) + vector[1]*math.sin(angle)
+    rotatedY = vector[1]*math.cos(angle) - vector[0]*math.sin(angle)
+
+    rotatedVector = (rotatedX,rotatedY)
+
+    return rotatedVector
+
+def yawFromQuaternion(Pose3D):
+
+    q0 = Pose3D.q0
+    q1 = Pose3D.q1
+    q2 = Pose3D.q2
+    q3 = Pose3D.q3
+
+    yaw = math.atan2(2*(q0*q3 + q1*q2) , 1 - 2*((q2*q2)+(q3*q3)))
+    return yaw
+
+class Buffer:
+
+    def __init__(self, size):
+        self.size = size
+        self.data = [False for i in xrange(size)]
+
+    def append(self, x):
+        self.data.pop(0)
+        self.data.append(x)
+
+    def get(self):
+        return self.data
+
+    def decicion(self):
+
+        count = 0
+        threshold = len(self.data)/2 #50%
+
+        for i in range(self.size):
+            if self.data[i]:
+                count = count + 1
+
+        decision = count >= threshold
+
+        return decision
+
+def qMultiply (q1,q2):
+
+    q1 = qNormal(q1)
+    q2 = qNormal(q2)
+
+    # quaternion1
+    w1 = q1[0]
+    x1 = q1[1]
+    y1 = q1[2]
+    z1 = q1[3]
+
+    #quaternion2
+    w2 = q2[0]
+    x2 = q2[1]
+    y2 = q2[2]
+    z2 = q2[3]
+
+    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+    y = w1*y2 + y1*w2 + z1*x2 - x1*z2
+    z = w1*z2 + z1*w2 + x1*y2 - y1*x2
+
+    q = [w,x,y,z]
+
+    q = qNormal(q)
+    return q
+
+def qNormal(q1):
+
+    qmodule = math.sqrt(q1[0]*q1[0] + q1[1]*q1[1] + q1[2]*q1[2] + q1[3]*q1[3])
+    q = [0,0,0,0]
+
+    if (qmodule == 0):
+        qmodule = 0.000000000001
+
+    q[0] = q1[0] / qmodule
+    q[1] = q1[1] / qmodule
+    q[2] = q1[2] / qmodule
+    q[3] = q1[3] / qmodule
+
+    return q
+
+def qConjugate(q1):
+
+    q1 = qNormal(q1)
+    q = [0,0,0,0]
+    q[0] = q1[0]
+    q[1] = -q1[1]
+    q[2] = -q1[2]
+    q[3] = -q1[3]
+
+    q = qNormal(q)
+    return q
+
+def qInverse(q1):
+
+    q1 = qNormal(q1)
+    qconjugate = qConjugate(q1)
+    qmodule = math.sqrt(q1[0] * q1[0] + q1[1] * q1[1] + q1[2] * q1[2] + q1[3] * q1[3])
+
+    if (qmodule == 0):
+        qmodule = 0.000000000001
+
+    q = [0,0,0,0]
+    q[0] = qconjugate[0] / qmodule
+    q[1] = qconjugate[1] / qmodule
+    q[2] = qconjugate[2] / qmodule
+    q[3] = qconjugate[3] / qmodule
+
+    q = qNormal(q)
+    return q
+
 if __name__ == '__main__':
 
     PH_Pose3D = Pose3DI(0,0,0,0,0,0,0,0)
@@ -448,20 +605,26 @@ if __name__ == '__main__':
     CameraTheading.daemon = True
     CameraTheading.start()
 
-
-    DefTrajectory = spiralTrajectory(StartWaypoint, ScanDistance, SpinsNumber)
+    StartWayPointXYZ = global2cartesian(StartWayPointLatLonHei)
+    DefTrajectory = spiralTrajectory(StartWayPointXYZ, ScanDistance, SpinsNumber)
     trajectory = DefTrajectory
     print 'Trajectory:'
     print trajectory
 
-    time.sleep(2) #due to that all Ice channel need to be initialized
+    targetBuffer = Buffer(10)
+    targetFound = False
+    landDecision = False
+
+
+
+    time.sleep(2) #Ice channels need to be initialized
 
     while True:
 
         time.sleep(1)#0.05) #20Hz
-        position = PH_Pose3D.getPose3DData()
-        xyz = [position.x, position.y, position.z]
-        landDecision = False;
+        vehiclePose = PH_Pose3D.getPose3DData()
+        vehicleXYZ = [vehiclePose.x, vehiclePose.y, vehiclePose.z]
+        vehicleYaw = yawFromQuaternion(vehiclePose)
 
         lock.acquire()
         Image2Analyze = PH_Camera
@@ -470,62 +633,74 @@ if __name__ == '__main__':
 
         GreenCenter, GreenArea, GreenStillLost = detection(Image2Analyze, hminG, hmaxG, sminG, smaxG, vminG, vmaxG)
         OrangeCenter, OrangeArea, OrangeStillLost = detection(Image2Analyze, hminO, hmaxO, sminO, smaxO, vminO, vmaxO)
-
-
+        targetArea = GreenArea + OrangeArea
         #FILTER NEEDED!!!!
 
-        targetFound = not(GreenStillLost or OrangeStillLost)
-        totalArea = GreenArea + OrangeArea
+        twoAreas = not(GreenStillLost or OrangeStillLost)
+        nearAreas = distance(GreenCenter,OrangeCenter) <= math.sqrt(targetArea*targetArea)
 
-        # print GreenStillLost
-        # print OrangeStillLost
-        # print stillLost
+        if twoAreas and nearAreas:
+            targetCentrePixels = (((GreenCenter[0] + OrangeCenter[0]) / 2), ((GreenCenter[1] + OrangeCenter[1]) / 2))
+            targetBuffer.append(True)
+        else:
+            targetBuffer.append(False)
 
+        targetBufferData = targetBuffer.get()
+
+        targetFound = targetBuffer.decicion()
+        print targetBufferData
+        print targetFound
 
         if targetFound:
 
             print 'Target Found'
-            print str(GreenCenter)
-            print str(GreenArea)
 
-            imageCentre = (int(CameraWidth) / 2, int(CameraHeight) / 2)
+            CameraFOWrad = math.radians(CameraFOW)
+            cameraCentrePixels = (ImageShape[0]/2, ImageShape[1]/2)
+            cameraCentreMetres = pixel2metres(cameraCentrePixels, ImageShape[0], vehicleXYZ[2], CameraFOWrad)
+            targetCentreMetres = pixel2metres(targetCentrePixels, ImageShape[0], vehicleXYZ[2], CameraFOWrad)
+            landingError = distance(targetCentreMetres, cameraCentreMetres)
 
-            cv2.line(Image2Analyze, (0, imageCentre[0]), (2 * imageCentre[1], imageCentre[1]), (255, 255, 255), )
-            cv2.line(Image2Analyze, (imageCentre[0], 0), (imageCentre[1], 2 * imageCentre[1]), (255, 255, 255), )
+            # print cameraCentreMetres
+            # print targetCentreMetres
 
-            xPid = PID(HorP, HorD, HorI)
-            xError = imageCentre[0] - GreenCenter[0]
-            xPid.setError(xError)
-            controlX = xPid.calcControl()
+            ### Landing decision make  ###
 
-            yPid = PID(HorP, HorD, HorI)
-            yError = imageCentre[1] - GreenCenter[1]
-            yPid.setError(xError)
-            controlY = yPid.calcControl()
+            print 'Landing error: %f' %landingError
 
-            zPid = PID(VerP, VerD, VerI)
-            zError = MissionHeight - xyz[2]  # z
-            zPid.setError(xError)
-            controlZ = zPid.calcControl()
+            # Loiter if target is in the landing area #
+            if (landingError < LandingPrecision):
+                print 'Landing decision = TRUE'
+                targetCentreMetres = (0,0)
+                landDecision = True
 
-
-            #Landing decision make
-            landDecision = True
             data = jderobot.CMDVelData()
 
             if landDecision:
-                data.linearZ = -1 #Landing Velocity
+                data.linearZ = -1  # Landing Velocity
             else:
                 data.linearZ = 0
 
             PH_CMDVel.setCMDVelData(data)
+
+            ### send waypoint to server ###
+            targetCentreMetresDiff = frameChange2D(targetCentreMetres, vehicleYaw)
+            print targetCentreMetresDiff
+            wayPoint = jderobot.Pose3DData()
+            wayPoint.x = vehicleXYZ[0] + targetCentreMetres[0]
+            wayPoint.y = vehicleXYZ[1] + targetCentreMetres[1]
+            wayPoint.z = MissionHeight
+            WP_Pose3D.setPose3DData(wayPoint)
+            # print wayPoint
+
+
 
         else:
 
             print 'Searching for target'
 
             # command, updatedTrajectory = nextWaypointCMDVel(xyz, trajectory)
-            updatedTrajectory = nextWaypointPose3D(xyz, trajectory)
+            updatedTrajectory = nextWaypointPose3D(vehicleXYZ, trajectory)
             trajectory = updatedTrajectory
 
             #restart trajectory when finish
@@ -536,17 +711,17 @@ if __name__ == '__main__':
 
             #send waypoint to server
             wayPoint = jderobot.Pose3DData()
-            wayPoint.x = 10 * random.random()  # trajectory[0][0]
-            wayPoint.y = 10 * random.random()  # trajectory[0][1]
-            wayPoint.z = 10 * random.random()  # trajectory[0][2]
+            wayPoint.x = trajectory[0][0]
+            wayPoint.y = trajectory[0][1]
+            wayPoint.z = trajectory[0][2]
             WP_Pose3D.setPose3DData(wayPoint)
             # print wayPoint
 
 
-            #Not to land
-            data = jderobot.CMDVelData()
-            data.linearZ = 0
-            PH_CMDVel.setCMDVelData(data)
+            # #Not to land
+            # data = jderobot.CMDVelData()
+            # data.linearZ = 0
+            # PH_CMDVel.setCMDVelData(data)
 
 
 

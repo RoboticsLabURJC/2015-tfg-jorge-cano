@@ -841,32 +841,28 @@ def main_loop():
         Yawvalue = mpstate.status.msgs['ATTITUDE'].yaw      #rad
 
         # ESTIMATED: fused GPS and accelerometers
-        Latvalue = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lat)/1E7)    #rad
-        Lonvalue = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lon)/1E7)    #rad
-        Altvalue = (mpstate.status.msgs['GLOBAL_POSITION_INT'].alt)/1000   #meters
+        PoseLatLonHei = {}
+        PoseLatLonHei['lat'] = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lat)/1E7)    #rad
+        PoseLatLonHei['lon'] = math.radians((mpstate.status.msgs['GLOBAL_POSITION_INT'].lon)/1E7)    #rad
+        PoseLatLonHei['hei'] = (mpstate.status.msgs['GLOBAL_POSITION_INT'].relative_alt)/1000   #meters
 
         PH_quat = quaternion.Quaternion([Rollvalue, Pitchvalue, Yawvalue])
-        PH_xyz = spherical2cartesian(Latvalue, Lonvalue, Altvalue)
+        PH_xyz = global2cartesian(PoseLatLonHei)
 
         #print PH_quat
         #print PH_xyz
 
-        PHx = PH_xyz[0]
-        PHy = PH_xyz[1]
-        PHz = PH_xyz[2]
-        PHh = 1 #Altvalue
-        PHq0 = PH_quat.__getitem__(0)
-        PHq1 = PH_quat.__getitem__(1)
-        PHq2 = PH_quat.__getitem__(2)
-        PHq3 = PH_quat.__getitem__(3)
+        data = jderobot.Pose3DData()
+        data.x = PH_xyz['x']
+        data.y = PH_xyz['y']
+        data.z = PH_xyz['z']
+        data.h = 1
+        data.q0 = PH_quat.__getitem__(0)
+        data.q1 = PH_quat.__getitem__(1)
+        data.q2 = PH_quat.__getitem__(2)
+        data.q3 = PH_quat.__getitem__(3)
 
-        PH_Pose3D.setPose3DData(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
-
-        #print PH_Pose3D.x
-
-        #pixhawkpos = Pose3DI(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
-        #pixhawkpos.setPose3DData(PHx,PHy,PHz,PHh,PHq0,PHq1,PHq2,PHq3)
-        #PH_Pose3D.printPose3DData(PH_Pose3D)
+        PH_Pose3D.setPose3DData(data)
 
         #####################################################################
 
@@ -1067,14 +1063,19 @@ def sendWayPoint2Vehicle(Pose3D):
 
     while True:
         time.sleep(1)
-        wayPoint = Pose3D.getPose3DData()
+        wayPointPoseXYZ = Pose3D.getPose3DData()
+        wayPointXYZ = {}
+        wayPointXYZ['x'] = wayPointPoseXYZ.x
+        wayPointXYZ['y'] = wayPointPoseXYZ.y
+        wayPointXYZ['z'] = wayPointPoseXYZ.z
+        wayPointLatLonHei =  cartesian2global(wayPointXYZ)
 
-        latittude = str(wayPoint.x)
-        longitude = str(wayPoint.y)
-        altittude = str(int(wayPoint.z))
+        latittude = str(wayPointLatLonHei['lat'])
+        longitude = str(wayPointLatLonHei['lon'])
+        altittude = str(int(wayPointLatLonHei['hei']))
 
         WPstring = 'guided ' + latittude + ' ' + longitude + ' ' + altittude
-        ###############process_stdin(WPstring)
+        process_stdin(WPstring)
 
         #print wayPoint
 
@@ -1087,19 +1088,46 @@ def landDecision(CMDVel):
             print'Lading decision: True'
             process_stdin('mode land')
 
-def spherical2cartesian(lat, lon, alt):
+            while (command.linearZ == -1):
+                time.sleep(1)
+                command = CMDVel.getCMDVelData()
+
+            print'Target Lost, recovering trajectory'
+            process_stdin('mode guided')
+
+def global2cartesian(poseLatLonHei):
 
     wgs84_radius = 6378137 #meters
     wgs84_flattening = 1 - 1 / 298.257223563
+    eartPerim = wgs84_radius * 2 * math.pi
 
-    radius = wgs84_radius + alt;
-    x = radius * math.cos(lat) * math.cos(lon)
-    y = radius * math.cos(lat) * math.sin(lon)
-    z = radius * math.sin(lat) * wgs84_flattening
+    earthRadiusLon = wgs84_radius * math.cos(poseLatLonHei['lat'])/wgs84_flattening
+    eartPerimLon = earthRadiusLon * 2 * math.pi
 
-    xyz = [x,y,z]
+    poseXYZ = {}
+    poseXYZ['x'] = poseLatLonHei['lon'] * eartPerimLon / (2*math.pi)
+    poseXYZ['y'] = poseLatLonHei['lat'] * eartPerim / (2*math.pi)
+    poseXYZ['z'] = poseLatLonHei['hei']
 
-    return xyz
+    return poseXYZ
+
+def cartesian2global(poseXYZ):
+
+    wgs84_radius = 6378137  # meters
+    wgs84_flattening = 1 - 1 / 298.257223563
+    eartPerim = wgs84_radius * 2 * math.pi
+    referenceLat = 40.1912 ##################### Suposed to be Vehicle lattitude
+
+    radLat = math.radians(referenceLat)
+    earthRadiusLon = wgs84_radius * math.cos(radLat)/wgs84_flattening
+    eartPerimLon = earthRadiusLon * 2 * math.pi
+
+    poseLatLonHei = {}
+    poseLatLonHei['lat'] = poseXYZ['y'] * 360 / eartPerim
+    poseLatLonHei['lon'] = poseXYZ['x'] * 360 / eartPerimLon
+    poseLatLonHei['hei'] = poseXYZ['z']
+
+    return poseLatLonHei
 
 def body2NED(CMDVel, Pose3D):
 
@@ -1513,8 +1541,8 @@ if __name__ == '__main__':
 
     # while True:
     #     time.sleep(1)
-    #     CMDVel = PH_CMDVel.getCMDVelData()
-    #     print CMDVel
+    #     Posejarl = PH_Pose3D.getPose3DData()
+    #     print Posejarl
 
 
     #####################################################################
