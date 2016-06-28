@@ -41,19 +41,19 @@ minTargetLado = 20
 maxTargetLado = 1000
 
 # Green
-hminG = 45
-hmaxG = 90
+hminG = 50
+hmaxG = 80
 vminG = 80
 vmaxG = 255
-sminG = 100
+sminG = 110
 smaxG = 255
 
 # Orange
 hminO = 10
-hmaxO = 40
+hmaxO = 35
 vminO = 80
 vmaxO = 255
-sminO = 150
+sminO = 110
 smaxO = 255
 
 # --- Hover control ---#
@@ -378,6 +378,7 @@ def detection(image, hmin, hmax, smin, smax, vmin, vmax):
 
     center = []
     area = 0
+    center = (0,0)
     colorFound = False
 
 
@@ -439,7 +440,7 @@ def global2cartesian(poseLatLonHei):
 
 def pixel2metres(pixelXY, pixelNum, height, fov):
 
-    #height = MissionHeight #only for testing
+    height = MissionHeight #only for testing
     vehicleAngle = fov/2
     groundAngle = (math.pi/2) - vehicleAngle
     hipoten = height / math.sin(groundAngle)
@@ -683,7 +684,6 @@ if __name__ == '__main__':
 
             ### send waypoint to server ###
             targetCentreMetresDiff = frameChange2D(targetCentreMetres, vehicleYaw)
-            print targetCentreMetresDiff
             wayPoint = jderobot.Pose3DData()
             wayPoint.x = vehicleXYZ[0] + targetCentreMetres[0]
             wayPoint.y = vehicleXYZ[1] + targetCentreMetres[1]
