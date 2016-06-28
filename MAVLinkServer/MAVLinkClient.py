@@ -51,9 +51,9 @@ smaxG = 255
 # Orange
 hminO = 10
 hmaxO = 40
-vminO = 100
+vminO = 80
 vmaxO = 255
-sminO = 110
+sminO = 150
 smaxO = 255
 
 # --- Hover control ---#
@@ -378,7 +378,7 @@ def detection(image, hmin, hmax, smin, smax, vmin, vmax):
 
     center = []
     area = 0
-    stillLost = True
+    colorFound = False
 
 
     detImage = rawImage
@@ -415,13 +415,12 @@ def detection(image, hmin, hmax, smin, smax, vmin, vmax):
 
         minTargetArea = minTargetLado * minTargetLado
 
-        if (area > minTargetArea):
-            # print center
-            # print area
-            stillLost = False
+        if (area > minTargetArea)and(center != (0,0)):
+            colorFound = True
+        else:
+            colorFound = False
 
-
-    return center, area, stillLost
+    return center, area, colorFound
 
 def global2cartesian(poseLatLonHei):
 
@@ -631,13 +630,17 @@ if __name__ == '__main__':
         ImageShape = PH_Camera.shape
         lock.release()
 
-        GreenCenter, GreenArea, GreenStillLost = detection(Image2Analyze, hminG, hmaxG, sminG, smaxG, vminG, vmaxG)
-        OrangeCenter, OrangeArea, OrangeStillLost = detection(Image2Analyze, hminO, hmaxO, sminO, smaxO, vminO, vmaxO)
+        GreenCenter, GreenArea, GreenFound = detection(Image2Analyze, hminG, hmaxG, sminG, smaxG, vminG, vmaxG)
+        OrangeCenter, OrangeArea, OrangeFound = detection(Image2Analyze, hminO, hmaxO, sminO, smaxO, vminO, vmaxO)
         targetArea = GreenArea + OrangeArea
-        #FILTER NEEDED!!!!
 
-        twoAreas = not(GreenStillLost or OrangeStillLost)
-        nearAreas = distance(GreenCenter,OrangeCenter) <= math.sqrt(targetArea*targetArea)
+        # print GreenCenter
+        # print OrangeCenter
+        # print GreenArea
+        # print OrangeArea
+
+        twoAreas = GreenFound and OrangeFound
+        nearAreas = distance(GreenCenter,OrangeCenter) <= math.sqrt(targetArea)
 
         if twoAreas and nearAreas:
             targetCentrePixels = (((GreenCenter[0] + OrangeCenter[0]) / 2), ((GreenCenter[1] + OrangeCenter[1]) / 2))
@@ -649,7 +652,6 @@ if __name__ == '__main__':
 
         targetFound = targetBuffer.decicion()
         print targetBufferData
-        print targetFound
 
         if targetFound:
 
@@ -661,15 +663,11 @@ if __name__ == '__main__':
             targetCentreMetres = pixel2metres(targetCentrePixels, ImageShape[0], vehicleXYZ[2], CameraFOWrad)
             landingError = distance(targetCentreMetres, cameraCentreMetres)
 
-            # print cameraCentreMetres
-            # print targetCentreMetres
-
             ### Landing decision make  ###
-
             print 'Landing error: %f' %landingError
 
             # Loiter if target is in the landing area #
-            if (landingError < LandingPrecision):
+            if (landingError < LandingPrecision) and (landingError != 0):
                 print 'Landing decision = TRUE'
                 targetCentreMetres = (0,0)
                 landDecision = True
