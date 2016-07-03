@@ -29,7 +29,7 @@ StartWayPointLatLonHei['hei'] = MissionHeight
 ScanDistance = 3        #metres
 SpinsNumber = 2
 ReachedDist = 1         #metres
-LandingPrecision = 5    #metres
+LandingPrecision = 2    #metres
 
 # --- Camera ---#
 
