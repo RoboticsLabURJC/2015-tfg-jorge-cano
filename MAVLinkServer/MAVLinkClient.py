@@ -33,7 +33,7 @@ LandingPrecision = 2    #metres
 
 # --- Camera ---#
 
-CameraFOW = 120  # Field of View in degrees
+CameraFOW = 45  # Field of View in degrees
 
 # --- Target ---#
 
@@ -41,20 +41,20 @@ minTargetLado = 20
 maxTargetLado = 1000
 
 # Green
-hminG = 50
+hminG = 60
 hmaxG = 80
-vminG = 80
-vmaxG = 255
 sminG = 110
 smaxG = 255
+vminG = 80
+vmaxG = 255
 
 # Orange
-hminO = 10
-hmaxO = 35
-vminO = 80
-vmaxO = 255
-sminO = 110
+hminO = 0
+hmaxO = 55
+sminO = 150
 smaxO = 255
+vminO = 150
+vmaxO = 255
 
 # --- Hover control ---#
 
@@ -440,7 +440,7 @@ def global2cartesian(poseLatLonHei):
 
 def pixel2metres(pixelXY, pixelNum, height, fov):
 
-    height = MissionHeight #only for testing
+    height = 1#MissionHeight #only for testing
     vehicleAngle = fov/2
     groundAngle = (math.pi/2) - vehicleAngle
     hipoten = height / math.sin(groundAngle)
@@ -639,6 +639,8 @@ if __name__ == '__main__':
         # print OrangeCenter
         # print GreenArea
         # print OrangeArea
+        print GreenFound
+        print OrangeFound
 
         twoAreas = GreenFound and OrangeFound
         nearAreas = distance(GreenCenter,OrangeCenter) <= math.sqrt(targetArea)
@@ -659,10 +661,17 @@ if __name__ == '__main__':
             print 'Target Found'
 
             CameraFOWrad = math.radians(CameraFOW)
-            cameraCentrePixels = (ImageShape[0]/2, ImageShape[1]/2)
+            cameraCentrePixels = (ImageShape[1]/2, ImageShape[0]/2)
             cameraCentreMetres = pixel2metres(cameraCentrePixels, ImageShape[0], vehicleXYZ[2], CameraFOWrad)
             targetCentreMetres = pixel2metres(targetCentrePixels, ImageShape[0], vehicleXYZ[2], CameraFOWrad)
             landingError = distance(targetCentreMetres, cameraCentreMetres)
+            targetPose = [targetCentreMetres[0]-cameraCentreMetres[0],-targetCentreMetres[1]+cameraCentreMetres[1]]
+
+            # print cameraCentrePixels
+            # print targetCentrePixels
+            print targetPose
+
+
 
             ### Landing decision make  ###
             print 'Landing error: %f' %landingError
