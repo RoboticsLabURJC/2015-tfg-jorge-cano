@@ -440,7 +440,7 @@ def global2cartesian(poseLatLonHei):
 
 def pixel2metres(pixelXY, pixelNum, height, fov):
 
-    height = 1#MissionHeight #only for testing
+    height = MissionHeight #only for testing
     vehicleAngle = fov/2
     groundAngle = (math.pi/2) - vehicleAngle
     hipoten = height / math.sin(groundAngle)
