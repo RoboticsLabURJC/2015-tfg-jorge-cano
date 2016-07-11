@@ -21,10 +21,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="MAVLinkServer.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="MAVLinkServer.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/MAVLinkServer.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3255">
+            <state relative-caret-position="526">
               <caret line="1063" column="15" selection-start-line="1063" selection-start-column="15" selection-end-line="1063" selection-end-column="15" />
               <folding>
                 <element signature="e#145#181#0" expanded="true" />
@@ -82,10 +82,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MAVLinkClient.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="MAVLinkClient.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/MAVLinkClient.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-2488">
+            <state relative-caret-position="15">
               <caret line="438" column="18" selection-start-line="438" selection-start-column="18" selection-end-line="438" selection-end-column="18" />
               <folding>
                 <element signature="e#26#52#0" expanded="true" />
@@ -204,7 +204,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="y" value="25" />
+    <option name="x" value="351" />
+    <option name="y" value="75" />
     <option name="width" value="997" />
     <option name="height" value="677" />
   </component>
@@ -233,6 +234,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -253,7 +255,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scratches" />
       <pane id="Scope" />
     </panes>
   </component>
@@ -438,26 +439,26 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="25" width="997" height="677" extended-state="0" />
-    <editor active="true" />
+    <frame x="351" y="75" width="997" height="677" extended-state="0" />
+    <editor active="false" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.28944725" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3173242" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26349208" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26349208" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
   <component name="Vcs.Log.UiProperties">
@@ -831,9 +832,38 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/MAVLinkClient.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="438" column="18" selection-start-line="438" selection-start-column="18" selection-end-line="438" selection-end-column="18" />
+          <folding>
+            <element signature="e#26#52#0" expanded="true" />
+            <element signature="e#1076#1709#0" expanded="false" />
+            <element signature="e#1747#2398#0" expanded="false" />
+            <element signature="e#2434#3088#0" expanded="false" />
+            <element signature="e#3155#3828#0" expanded="false" />
+            <element signature="e#3851#4958#0" expanded="false" />
+            <element signature="e#4986#5642#0" expanded="false" />
+            <element signature="e#5683#5973#0" expanded="false" />
+            <element signature="e#6026#6349#0" expanded="false" />
+            <element signature="e#6402#6719#0" expanded="false" />
+            <element signature="e#6751#7001#0" expanded="false" />
+            <element signature="e#7066#7611#0" expanded="false" />
+            <element signature="e#9504#9967#0" expanded="false" />
+            <element signature="e#10418#10618#0" expanded="false" />
+            <element signature="e#10656#10809#0" expanded="false" />
+            <element signature="e#10830#11303#0" expanded="false" />
+            <element signature="e#11333#11732#0" expanded="false" />
+            <element signature="e#11756#12028#0" expanded="false" />
+            <element signature="e#12055#12193#0" expanded="false" />
+            <element signature="e#12218#12602#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/MAVLinkServer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3255">
+        <state relative-caret-position="526">
           <caret line="1063" column="15" selection-start-line="1063" selection-start-column="15" selection-end-line="1063" selection-end-column="15" />
           <folding>
             <element signature="e#145#181#0" expanded="true" />
@@ -886,35 +916,6 @@
             <element signature="e#38969#39241#0" expanded="false" />
             <element signature="e#39268#39406#0" expanded="false" />
             <element signature="e#39431#39815#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MAVLinkClient.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2488">
-          <caret line="438" column="18" selection-start-line="438" selection-start-column="18" selection-end-line="438" selection-end-column="18" />
-          <folding>
-            <element signature="e#26#52#0" expanded="true" />
-            <element signature="e#1076#1709#0" expanded="false" />
-            <element signature="e#1747#2398#0" expanded="false" />
-            <element signature="e#2434#3088#0" expanded="false" />
-            <element signature="e#3155#3828#0" expanded="false" />
-            <element signature="e#3851#4958#0" expanded="false" />
-            <element signature="e#4986#5642#0" expanded="false" />
-            <element signature="e#5683#5973#0" expanded="false" />
-            <element signature="e#6026#6349#0" expanded="false" />
-            <element signature="e#6402#6719#0" expanded="false" />
-            <element signature="e#6751#7001#0" expanded="false" />
-            <element signature="e#7066#7611#0" expanded="false" />
-            <element signature="e#9504#9967#0" expanded="false" />
-            <element signature="e#10418#10618#0" expanded="false" />
-            <element signature="e#10656#10809#0" expanded="false" />
-            <element signature="e#10830#11303#0" expanded="false" />
-            <element signature="e#11333#11732#0" expanded="false" />
-            <element signature="e#11756#12028#0" expanded="false" />
-            <element signature="e#12055#12193#0" expanded="false" />
-            <element signature="e#12218#12602#0" expanded="false" />
           </folding>
         </state>
       </provider>
